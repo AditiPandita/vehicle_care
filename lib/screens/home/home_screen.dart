@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../profile/profile_drawer.dart';
 import '../vehicles/vehicle_screen.dart';
+import '../reminders/reminders_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String userName;
@@ -73,7 +74,18 @@ class HomeScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 32),
+                  _RemindersCard(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const RemindersScreen(),
+      ),
+    );
+  },
+),
 
+const SizedBox(height: 28),
               const Text(
                 'Your Vehicles',
                 style: TextStyle(
@@ -215,6 +227,80 @@ class _VehicleTypeCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _RemindersCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _RemindersCard({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      elevation: 2,
+      shadowColor: Colors.black12,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                height: 58,
+                width: 58,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: const Icon(
+                  Icons.notifications_active_outlined,
+                  size: 30,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+
+              const SizedBox(width: 15),
+
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Service Reminders',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.darkText,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Check your upcoming vehicle services',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 17,
+                color: AppTheme.primaryColor,
               ),
             ],
           ),

@@ -53,6 +53,18 @@ class ServiceLogService {
 
     return vehicleLogs;
   }
+  Future<ServiceLog?> getLatestServiceLog(
+  String vehicleId,
+) async {
+  final List<ServiceLog> logs =
+      await getServiceLogs(vehicleId);
+
+  if (logs.isEmpty) {
+    return null;
+  }
+
+  return logs.first;
+}
 
   Future<void> saveServiceLog(
     ServiceLog serviceLog,

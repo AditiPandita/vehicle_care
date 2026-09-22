@@ -13,6 +13,7 @@ class AddServiceLogScreen extends StatefulWidget {
   final String vehicleBrand;
   final String vehicleModel;
   final String registrationNumber;
+  final String vehicleType;
 
   const AddServiceLogScreen({
     super.key,
@@ -20,6 +21,7 @@ class AddServiceLogScreen extends StatefulWidget {
     required this.vehicleBrand,
     required this.vehicleModel,
     required this.registrationNumber,
+    required this.vehicleType,
   });
 
   @override
@@ -130,6 +132,10 @@ class _AddServiceLogScreenState
         );
       },
     );
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadParts({
@@ -148,6 +154,7 @@ class _AddServiceLogScreenState
           await _sparePartsService.searchParts(
         brand: widget.vehicleBrand,
         model: widget.vehicleModel,
+        vehicleType: widget.vehicleType,
         query: query,
       );
 
@@ -159,7 +166,7 @@ class _AddServiceLogScreenState
         _availableParts = parts;
         _isSearchingParts = false;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
@@ -168,6 +175,14 @@ class _AddServiceLogScreenState
         _availableParts = [];
         _isSearchingParts = false;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to load spare parts: $error',
+          ),
+        ),
+      );
     }
   }
 
@@ -234,18 +249,6 @@ class _AddServiceLogScreenState
     });
 
     try {
-      /*
-       * Your existing ServiceLog model expects:
-       *
-       * odometerReading
-       * labourCost
-       * sparePartsCost
-       * spareParts = List<String>
-       *
-       * Labour cost is intentionally 0 because
-       * labour cost is not part of your UI.
-       */
-
       final ServiceLog serviceLog =
           ServiceLog(
         id: DateTime.now()
@@ -272,6 +275,7 @@ class _AddServiceLogScreenState
 
         sparePartsCost: _sparePartsTotal,
 
+        // Labour cost is not part of the UI.
         labourCost: 0,
       );
 
@@ -290,7 +294,10 @@ class _AddServiceLogScreenState
         ),
       );
 
-      Navigator.pop(context, true);
+      Navigator.pop(
+        context,
+        true,
+      );
     } catch (_) {
       if (!mounted) {
         return;
@@ -452,7 +459,9 @@ class _AddServiceLogScreenState
                     color: AppTheme.darkText,
                   ),
                 ),
+
                 const SizedBox(height: 5),
+
                 Text(
                   widget.registrationNumber,
                   style: const TextStyle(
@@ -523,7 +532,9 @@ class _AddServiceLogScreenState
                 color: AppTheme.darkText,
               ),
             ),
+
             SizedBox(width: 5),
+
             Text(
               '*',
               style: TextStyle(
@@ -543,7 +554,8 @@ class _AddServiceLogScreenState
             decimal: true,
           ),
           decoration: const InputDecoration(
-            hintText: 'Enter current odometer',
+            hintText:
+                'Enter current odometer',
             prefixIcon: Icon(
               Icons.speed_outlined,
               color: AppTheme.primaryColor,
@@ -561,7 +573,8 @@ class _AddServiceLogScreenState
               value.trim(),
             );
 
-            if (number == null || number < 0) {
+            if (number == null ||
+                number < 0) {
               return 'Enter a valid odometer';
             }
 
@@ -707,7 +720,9 @@ class _AddServiceLogScreenState
               size: 34,
               color: AppTheme.secondaryText,
             ),
+
             SizedBox(height: 10),
+
             Text(
               'No spare parts found',
               style: TextStyle(
@@ -786,6 +801,7 @@ class _AddServiceLogScreenState
                           .trim()
                           .isNotEmpty) ...[
                         const SizedBox(height: 4),
+
                         Text(
                           'Part No: '
                           '${part.partNumber}',
@@ -822,7 +838,9 @@ class _AddServiceLogScreenState
                           _addPart(part);
                         },
                   child: Text(
-                    isSelected ? 'Added' : 'Add',
+                    isSelected
+                        ? 'Added'
+                        : 'Add',
                   ),
                 ),
               ],
@@ -921,7 +939,8 @@ class _AddServiceLogScreenState
                           Icons.close,
                           size: 19,
                         ),
-                        color: Colors.redAccent,
+                        color:
+                            Colors.redAccent,
                       ),
                     ],
                   ),

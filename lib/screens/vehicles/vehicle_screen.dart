@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import '../../models/vehicle_model.dart';
+import '../../services/petrol_log_service.dart';
 import '../../services/vehicle_service.dart';
+import '../activity/recent_activity_screen.dart';
+import '../petrol/petrol_logs_screen.dart';
 import '../service/service_logs_screen.dart';
 import 'add_vehicle_screen.dart';
 import 'vehicle_details_screen.dart';
@@ -334,13 +337,77 @@ class _VehicleDashboardState
     extends State<VehicleDashboard> {
   late Vehicle _vehicle;
 
+  String _mileage = '-- km/L';
+
   final VehicleService _vehicleService =
       VehicleService();
+
+  final PetrolLogService _petrolLogService =
+      PetrolLogService();
 
   @override
   void initState() {
     super.initState();
+
     _vehicle = widget.vehicle;
+
+    _loadMileage();
+  }
+
+  // ==========================================================
+  // MILEAGE CALCULATION
+  // ==========================================================
+
+  Future<void> _loadMileage() async {
+    try {
+      final logs =
+          await _petrolLogService.getPetrolLogs(
+        _vehicle.id,
+      );
+
+      if (!mounted) return;
+
+      // At least two petrol logs are required
+      // to calculate mileage.
+      if (logs.length < 2) {
+        setState(() {
+          _mileage = '-- km/L';
+        });
+        return;
+      }
+
+      // PetrolLogService returns logs newest first.
+      final latestLog = logs[0];
+      final previousLog = logs[1];
+
+      final double distance =
+          latestLog.odometerReading -
+          previousLog.odometerReading;
+
+      final double fuelUsed =
+          latestLog.fuelQuantity;
+
+      if (distance <= 0 || fuelUsed <= 0) {
+        setState(() {
+          _mileage = '-- km/L';
+        });
+        return;
+      }
+
+      final double mileage =
+          distance / fuelUsed;
+
+      setState(() {
+        _mileage =
+            '${mileage.toStringAsFixed(1)} km/L';
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _mileage = '-- km/L';
+      });
+    }
   }
 
   Future<void> _openVehicleDetails() async {
@@ -382,21 +449,35 @@ class _VehicleDashboardState
     );
   }
 
-  void _openPetrolLogs() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Petrol Logs will be added next.',
+  // ==========================================================
+  // PETROL LOGS
+  // ==========================================================
+
+  Future<void> _openPetrolLogs() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PetrolLogsScreen(
+          vehicleId: _vehicle.id,
         ),
       ),
     );
+
+    // Recalculate mileage when returning
+    // from Petrol Logs.
+    await _loadMileage();
   }
 
+  // ==========================================================
+  // RECENT ACTIVITY
+  // ==========================================================
+
   void _openRecentActivity() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Recent Activity will be added next.',
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecentActivityScreen(
+          vehicleId: _vehicle.id,
         ),
       ),
     );
@@ -465,7 +546,8 @@ class _VehicleDashboardState
               color: Colors.white.withValues(
                 alpha: 0.15,
               ),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius:
+                  BorderRadius.circular(18),
             ),
             child: Icon(
               isTwoWheeler
@@ -514,7 +596,8 @@ class _VehicleDashboardState
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius:
+            BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
@@ -535,17 +618,19 @@ class _VehicleDashboardState
                   '${_formatOdometer(_vehicle.currentOdometer)} km',
             ),
           ),
+
           Container(
             height: 50,
             width: 1,
             color: Colors.grey.shade200,
           ),
+
           Expanded(
             child: _buildStatItem(
               icon:
                   Icons.local_gas_station_outlined,
               title: 'Mileage',
-              value: '-- km/L',
+              value: _mileage,
             ),
           ),
         ],
@@ -611,12 +696,14 @@ class _VehicleDashboardState
           subtitle: 'View & edit details',
           onTap: _openVehicleDetails,
         ),
+
         _buildFeatureCard(
           icon: Icons.speed_outlined,
           title: 'Odometer',
           subtitle: 'Current reading',
           onTap: _showOdometer,
         ),
+
         _buildFeatureCard(
           icon: Icons.build_outlined,
           title: 'Service Logs',
@@ -633,6 +720,7 @@ class _VehicleDashboardState
             );
           },
         ),
+
         _buildFeatureCard(
           icon:
               Icons.local_gas_station_outlined,
@@ -640,6 +728,7 @@ class _VehicleDashboardState
           subtitle: 'Fuel history',
           onTap: _openPetrolLogs,
         ),
+
         _buildFeatureCard(
           icon: Icons.history,
           title: 'Recent Activity',
@@ -658,7 +747,8 @@ class _VehicleDashboardState
   }) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius:
+          BorderRadius.circular(20),
       child: InkWell(
         borderRadius:
             BorderRadius.circular(20),
@@ -699,7 +789,9 @@ class _VehicleDashboardState
                   size: 22,
                 ),
               ),
+
               const Spacer(),
+
               Text(
                 title,
                 style: const TextStyle(
@@ -708,7 +800,9 @@ class _VehicleDashboardState
                   color: AppTheme.darkText,
                 ),
               ),
+
               const SizedBox(height: 4),
+
               Text(
                 subtitle,
                 style: const TextStyle(

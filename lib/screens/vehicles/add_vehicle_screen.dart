@@ -2,125 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import '../../models/vehicle_model.dart';
+import '../../services/nhtsa_vehicle_service.dart';
 import '../../services/vehicle_service.dart';
-
-class VehicleCatalogItem {
-  final String id;
-  final String brand;
-  final String model;
-
-  const VehicleCatalogItem({
-    required this.id,
-    required this.brand,
-    required this.model,
-  });
-
-  String get displayName => '$brand $model';
-}
-
-class VehicleCatalogService {
-  Future<List<VehicleCatalogItem>> getVehicleModels(
-    String vehicleType,
-  ) async {
-    if (vehicleType == '2 Wheeler') {
-      return const [
-        VehicleCatalogItem(
-          id: '2w-001',
-          brand: 'Bajaj',
-          model: 'Pulsar 150',
-        ),
-        VehicleCatalogItem(
-          id: '2w-002',
-          brand: 'Bajaj',
-          model: 'Pulsar N160',
-        ),
-        VehicleCatalogItem(
-          id: '2w-003',
-          brand: 'Bajaj',
-          model: 'Pulsar NS200',
-        ),
-        VehicleCatalogItem(
-          id: '2w-004',
-          brand: 'Bajaj',
-          model: 'Dominar 400',
-        ),
-        VehicleCatalogItem(
-          id: '2w-005',
-          brand: 'Hero',
-          model: 'Splendor Plus',
-        ),
-        VehicleCatalogItem(
-          id: '2w-006',
-          brand: 'Honda',
-          model: 'Shine',
-        ),
-        VehicleCatalogItem(
-          id: '2w-007',
-          brand: 'TVS',
-          model: 'Apache RTR 160',
-        ),
-        VehicleCatalogItem(
-          id: '2w-008',
-          brand: 'Royal Enfield',
-          model: 'Classic 350',
-        ),
-        VehicleCatalogItem(
-          id: '2w-009',
-          brand: 'Yamaha',
-          model: 'MT-15',
-        ),
-      ];
-    }
-
-    return const [
-      VehicleCatalogItem(
-        id: '4w-001',
-        brand: 'Tata',
-        model: 'Nexon',
-      ),
-      VehicleCatalogItem(
-        id: '4w-002',
-        brand: 'Tata',
-        model: 'Punch',
-      ),
-      VehicleCatalogItem(
-        id: '4w-003',
-        brand: 'Maruti Suzuki',
-        model: 'Swift',
-      ),
-      VehicleCatalogItem(
-        id: '4w-004',
-        brand: 'Maruti Suzuki',
-        model: 'Baleno',
-      ),
-      VehicleCatalogItem(
-        id: '4w-005',
-        brand: 'Hyundai',
-        model: 'i20',
-      ),
-      VehicleCatalogItem(
-        id: '4w-006',
-        brand: 'Hyundai',
-        model: 'Creta',
-      ),
-      VehicleCatalogItem(
-        id: '4w-007',
-        brand: 'Honda',
-        model: 'City',
-      ),
-      VehicleCatalogItem(
-        id: '4w-008',
-        brand: 'Mahindra',
-        model: 'XUV 3XO',
-      ),
-      VehicleCatalogItem(
-        id: '4w-009',
-        brand: 'Toyota',
-        model: 'Urban Cruiser Hyryder',
-      ),
-    ];
-  }
-}
 
 class AddVehicleScreen extends StatefulWidget {
   final String vehicleType;
@@ -151,17 +34,22 @@ class _AddVehicleScreenState
   final TextEditingController _odometerController =
       TextEditingController();
 
-  final VehicleCatalogService _catalogService =
-      VehicleCatalogService();
+  final NhtsaVehicleService _nhtsaService =
+      NhtsaVehicleService();
 
   final VehicleService _vehicleService =
       VehicleService();
 
-  List<VehicleCatalogItem> _vehicleModels = [];
+  List<String> _vehicleBrands = [];
 
-  VehicleCatalogItem? _selectedVehicleModel;
+  List<NhtsaVehicleItem> _vehicleModels = [];
 
-  bool _isLoadingModels = true;
+  String? _selectedBrand;
+
+  NhtsaVehicleItem? _selectedVehicleModel;
+
+  bool _isLoadingBrands = true;
+  bool _isLoadingModels = false;
   bool _isSaving = false;
 
   bool get isEditing =>
@@ -184,60 +72,103 @@ class _AddVehicleScreenState
       );
     }
 
-    _loadVehicleModels();
+    _loadVehicleBrands();
   }
 
-  Future<void> _loadVehicleModels() async {
+  Future<void> _loadVehicleBrands() async {
     try {
-      final List<VehicleCatalogItem> models =
-          await _catalogService.getVehicleModels(
+      final List<String> brands =
+          await _nhtsaService.getBrands(
         widget.vehicleType,
       );
 
-      VehicleCatalogItem? selected;
+      String? selectedBrand;
 
       if (widget.existingVehicle != null) {
-        for (final VehicleCatalogItem item in models) {
-          if (item.brand ==
-                  widget.existingVehicle!.brand &&
-              item.model ==
-                  widget.existingVehicle!.model) {
-            selected = item;
+        final String existingBrand =
+            widget.existingVehicle!.brand.trim();
+
+        for (final String brand in brands) {
+          if (brand.toLowerCase() ==
+              existingBrand.toLowerCase()) {
+            selectedBrand = brand;
             break;
           }
         }
+      }
 
-        if (selected == null &&
-            widget.existingVehicle!.brand
-                .trim()
-                .isNotEmpty &&
-            widget.existingVehicle!.model
-                .trim()
-                .isNotEmpty) {
-          selected = VehicleCatalogItem(
-            id:
-                'saved-${widget.existingVehicle!.id}',
-            brand: widget.existingVehicle!.brand,
-            model: widget.existingVehicle!.model,
-          );
+      if (!mounted) return;
 
-          models.add(selected);
+      setState(() {
+        _vehicleBrands = brands;
+        _selectedBrand = selectedBrand;
+        _isLoadingBrands = false;
+      });
+
+      if (selectedBrand != null) {
+        await _loadModelsForBrand(
+          selectedBrand,
+          selectExistingModel: true,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingBrands = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to load vehicle brands.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadModelsForBrand(
+    String brand, {
+    bool selectExistingModel = false,
+  }) async {
+    setState(() {
+      _isLoadingModels = true;
+      _vehicleModels = [];
+      _selectedVehicleModel = null;
+    });
+
+    try {
+      final List<NhtsaVehicleItem> models =
+          await _nhtsaService.getModels(
+        brand,
+      );
+
+      NhtsaVehicleItem? selectedModel;
+
+      if (selectExistingModel &&
+          widget.existingVehicle != null) {
+        final String existingModel =
+            widget.existingVehicle!.model.trim();
+
+        for (final NhtsaVehicleItem item in models) {
+          if (item.model.toLowerCase() ==
+              existingModel.toLowerCase()) {
+            selectedModel = item;
+            break;
+          }
         }
       }
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _vehicleModels = models;
-        _selectedVehicleModel = selected;
+        _selectedVehicleModel = selectedModel;
         _isLoadingModels = false;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _isLoadingModels = false;
@@ -266,7 +197,7 @@ class _AddVehicleScreenState
       return;
     }
 
-    final VehicleCatalogItem? selectedModel =
+    final NhtsaVehicleItem? selectedModel =
         _selectedVehicleModel;
 
     if (selectedModel == null) {
@@ -332,6 +263,9 @@ class _AddVehicleScreenState
       model: selectedModel.model,
       year: year,
       currentOdometer: odometer,
+      createdDate:
+          widget.existingVehicle?.createdDate ??
+              DateTime.now(),
     );
 
     try {
@@ -412,7 +346,11 @@ class _AddVehicleScreenState
 
                 const SizedBox(height: 16),
 
-                _buildVehicleModelField(),
+                _buildBrandField(),
+
+                const SizedBox(height: 16),
+
+                _buildModelField(),
 
                 const SizedBox(height: 16),
 
@@ -503,11 +441,110 @@ class _AddVehicleScreenState
     );
   }
 
-  Widget _buildVehicleModelField() {
+  Widget _buildBrandField() {
+    if (_isLoadingBrands) {
+      return const InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Brand *',
+          prefixIcon: Icon(
+            Icons.business_outlined,
+          ),
+        ),
+        child: SizedBox(
+          height: 24,
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_vehicleBrands.isEmpty) {
+      return const InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Brand *',
+          prefixIcon: Icon(
+            Icons.business_outlined,
+          ),
+        ),
+        child: Text(
+          'No vehicle brands available',
+          style: TextStyle(
+            color: AppTheme.secondaryText,
+          ),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedBrand,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Brand *',
+        prefixIcon: Icon(
+          Icons.business_outlined,
+        ),
+      ),
+      items: _vehicleBrands.map(
+        (String brand) {
+          return DropdownMenuItem<String>(
+            value: brand,
+            child: Text(
+              brand,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        },
+      ).toList(),
+      onChanged: (String? value) {
+        if (value == null) {
+          return;
+        }
+
+        setState(() {
+          _selectedBrand = value;
+          _selectedVehicleModel = null;
+          _vehicleModels = [];
+        });
+
+        _loadModelsForBrand(value);
+      },
+      validator: (String? value) {
+        if (value == null ||
+            value.trim().isEmpty) {
+          return 'Please select a brand';
+        }
+
+        return null;
+      },
+    );
+  }
+
+  Widget _buildModelField() {
+    if (_selectedBrand == null) {
+      return const InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Model *',
+          prefixIcon: Icon(
+            Icons.directions_car_outlined,
+          ),
+        ),
+        child: Text(
+          'Select a brand first',
+          style: TextStyle(
+            color: AppTheme.secondaryText,
+          ),
+        ),
+      );
+    }
+
     if (_isLoadingModels) {
       return const InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Brand & Model',
+          labelText: 'Model *',
           prefixIcon: Icon(
             Icons.directions_car_outlined,
           ),
@@ -524,39 +561,49 @@ class _AddVehicleScreenState
       );
     }
 
-    return DropdownButtonFormField<
-        VehicleCatalogItem>(
+    if (_vehicleModels.isEmpty) {
+      return const InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Model *',
+          prefixIcon: Icon(
+            Icons.directions_car_outlined,
+          ),
+        ),
+        child: Text(
+          'No models available for this brand',
+          style: TextStyle(
+            color: AppTheme.secondaryText,
+          ),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<NhtsaVehicleItem>(
       initialValue: _selectedVehicleModel,
       isExpanded: true,
       decoration: const InputDecoration(
-        labelText: 'Brand & Model *',
+        labelText: 'Model *',
         prefixIcon: Icon(
           Icons.directions_car_outlined,
         ),
       ),
       items: _vehicleModels.map(
-        (VehicleCatalogItem item) {
-          return DropdownMenuItem<
-              VehicleCatalogItem>(
+        (NhtsaVehicleItem item) {
+          return DropdownMenuItem<NhtsaVehicleItem>(
             value: item,
             child: Text(
-              item.displayName,
-              overflow:
-                  TextOverflow.ellipsis,
+              item.model,
+              overflow: TextOverflow.ellipsis,
             ),
           );
         },
       ).toList(),
-      onChanged: (
-        VehicleCatalogItem? value,
-      ) {
+      onChanged: (NhtsaVehicleItem? value) {
         setState(() {
           _selectedVehicleModel = value;
         });
       },
-      validator: (
-        VehicleCatalogItem? value,
-      ) {
+      validator: (NhtsaVehicleItem? value) {
         if (value == null) {
           return 'Please select a vehicle model';
         }

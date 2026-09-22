@@ -6,6 +6,7 @@ class Vehicle {
   final String model;
   final int year;
   final double currentOdometer;
+  final DateTime createdDate;
 
   const Vehicle({
     required this.id,
@@ -15,6 +16,7 @@ class Vehicle {
     required this.model,
     required this.year,
     required this.currentOdometer,
+    required this.createdDate,
   });
 
   String get displayName {
@@ -44,6 +46,7 @@ class Vehicle {
       'model': model,
       'year': year,
       'currentOdometer': currentOdometer,
+      'createdDate': createdDate.toIso8601String(),
     };
   }
 
@@ -62,6 +65,13 @@ class Vehicle {
       year: (json['year'] as num?)?.toInt() ?? 0,
       currentOdometer:
           (json['currentOdometer'] as num?)?.toDouble() ?? 0.0,
+
+      // Old saved vehicles ke liye fallback
+      // DateTime.now() use hoga agar createdDate nahi mila.
+      createdDate: DateTime.tryParse(
+            json['createdDate']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
     );
   }
 }

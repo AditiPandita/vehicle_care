@@ -103,6 +103,7 @@ class _ServiceLogsScreenState
           vehicleModel: vehicle.model,
           registrationNumber:
               vehicle.registrationNumber,
+              vehicleType: vehicle.vehicleType,
         ),
       ),
     );
@@ -148,21 +149,42 @@ class _ServiceLogsScreenState
     // ==========================================================
 
     if (_serviceLogs.isEmpty) {
-      return Center(
+      return _buildEmptyState();
+    }
+
+    // ==========================================================
+    // SERVICE LOGS AVAILABLE
+    // ==========================================================
+
+return Column(
+  children: [
+    // FULL WIDTH ADD SERVICE LOG BAR
+    Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        12,
+      ),
+      color: Colors.white,
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
         child: ElevatedButton.icon(
           onPressed: _addServiceLog,
           icon: const Icon(
             Icons.add,
-            size: 19,
+            size: 20,
           ),
           label: const Text(
             'Add Service Log',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           style: ElevatedButton.styleFrom(
-            minimumSize: const Size(
-              175,
-              52,
-            ),
             backgroundColor:
                 AppTheme.primaryColor,
             foregroundColor: Colors.white,
@@ -173,82 +195,151 @@ class _ServiceLogsScreenState
             ),
           ),
         ),
-      );
-    }
+      ),
+    ),
 
-    // ==========================================================
-    // SERVICE LOGS EXIST
-    // ==========================================================
-
-    return Column(
-      children: [
-        // TOP BAR
-        Container(
-          width: double.infinity,
-          height: 86,
-          padding:
-              const EdgeInsets.symmetric(
-            horizontal: 20,
+    // SERVICE LOGS BELOW
+    Expanded(
+      child: RefreshIndicator(
+        color: AppTheme.primaryColor,
+        onRefresh: _loadData,
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            30,
           ),
-          color: Colors.white,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: _addServiceLog,
-              icon: const Icon(
-                Icons.add,
-                size: 18,
+          itemCount: _serviceLogs.length,
+          itemBuilder: (
+            context,
+            index,
+          ) {
+            final ServiceLog log =
+                _serviceLogs[index];
+
+            return _buildServiceLogCard(log);
+          },
+        ),
+      ),
+    ),
+  ],
+);
+  }
+
+  // ==========================================================
+  // FULL SCREEN EMPTY STATE
+  // ==========================================================
+
+  Widget _buildEmptyState() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          28,
+          20,
+          28,
+          28,
+        ),
+        child: Column(
+          children: [
+            const Spacer(),
+
+            // ILLUSTRATION
+            Container(
+              height: 190,
+              width: 190,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryLight,
+                borderRadius:
+                    BorderRadius.circular(95),
               ),
-              label: const Text(
-                'Add Service Log',
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    Icons.garage_outlined,
+                    size: 105,
+                    color:
+                        AppTheme.primaryColor
+                            .withValues(alpha: 0.85),
+                  ),
+                  Positioned(
+                    bottom: 32,
+                    child: Icon(
+                      Icons.directions_car,
+                      size: 58,
+                      color:
+                          AppTheme.primaryColor,
+                    ),
+                  ),
+                ],
               ),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(
-                  150,
-                  48,
+            ),
+
+            const SizedBox(height: 30),
+
+            // TITLE
+            const Text(
+              'No Service Logs Yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.darkText,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // DESCRIPTION
+            const Text(
+              'Keep track of your vehicle maintenance, '
+              'service history and spare parts costs '
+              'by adding your first service record.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: AppTheme.secondaryText,
+              ),
+            ),
+
+            const Spacer(),
+
+            // ADD SERVICE LOG BUTTON
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: _addServiceLog,
+                icon: const Icon(
+                  Icons.add,
+                  size: 21,
                 ),
-                backgroundColor:
-                    AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                elevation: 3,
-                shape:
-                    RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(13),
+                label: const Text(
+                  'Add Service Log',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight:
+                        FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
-
-        // SERVICE LOG LIST
-        Expanded(
-          child: RefreshIndicator(
-            color: AppTheme.primaryColor,
-            onRefresh: _loadData,
-            child: ListView.builder(
-              padding:
-                  const EdgeInsets.fromLTRB(
-                20,
-                12,
-                20,
-                30,
-              ),
-              itemCount:
-                  _serviceLogs.length,
-              itemBuilder:
-                  (context, index) {
-                final ServiceLog log =
-                    _serviceLogs[index];
-
-                return _buildServiceLogCard(
-                  log,
-                );
-              },
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -261,8 +352,9 @@ class _ServiceLogsScreenState
   ) {
     return Container(
       width: double.infinity,
-      margin:
-          const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(
+        bottom: 16,
+      ),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -285,7 +377,6 @@ class _ServiceLogsScreenState
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
-          // HEADER
           Row(
             children: [
               Container(
@@ -352,14 +443,12 @@ class _ServiceLogsScreenState
 
           const SizedBox(height: 18),
 
-          // ODOMETER
           _buildInfoRow(
             Icons.speed_outlined,
             'Odometer',
             '${_formatNumber(log.odometerReading)} km',
           ),
 
-          // SERVICE CENTER
           if (log.serviceCenter
               .trim()
               .isNotEmpty) ...[
@@ -371,12 +460,9 @@ class _ServiceLogsScreenState
             ),
           ],
 
-          // SPARE PARTS
           if (log.spareParts.isNotEmpty) ...[
             const SizedBox(height: 17),
-
             const Divider(),
-
             const SizedBox(height: 12),
 
             const Text(
@@ -407,9 +493,7 @@ class _ServiceLogsScreenState
                         color:
                             AppTheme.primaryColor,
                       ),
-
                       const SizedBox(width: 9),
-
                       Expanded(
                         child: Text(
                           partName,
@@ -432,7 +516,6 @@ class _ServiceLogsScreenState
             Row(
               children: [
                 const Spacer(),
-
                 Text(
                   'Spare Parts: '
                   '₹${log.sparePartsCost.toStringAsFixed(0)}',
@@ -448,16 +531,12 @@ class _ServiceLogsScreenState
             ),
           ],
 
-          // NOTES
           if (log.notes
               .trim()
               .isNotEmpty) ...[
             const SizedBox(height: 12),
-
             const Divider(),
-
             const SizedBox(height: 10),
-
             Text(
               log.notes,
               style: const TextStyle(
@@ -489,9 +568,7 @@ class _ServiceLogsScreenState
           size: 18,
           color: AppTheme.primaryColor,
         ),
-
         const SizedBox(width: 9),
-
         Text(
           title,
           style: const TextStyle(
@@ -500,9 +577,7 @@ class _ServiceLogsScreenState
                 AppTheme.secondaryText,
           ),
         ),
-
         const Spacer(),
-
         Flexible(
           child: Text(
             value,
@@ -520,7 +595,7 @@ class _ServiceLogsScreenState
   }
 
   // ==========================================================
-  // DATE FORMAT
+  // DATE
   // ==========================================================
 
   String _formatDate(DateTime date) {
@@ -545,7 +620,7 @@ class _ServiceLogsScreenState
   }
 
   // ==========================================================
-  // NUMBER FORMAT
+  // NUMBER
   // ==========================================================
 
   String _formatNumber(double value) {
